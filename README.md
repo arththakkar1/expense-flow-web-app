@@ -30,7 +30,7 @@ A modern, production-ready authentication template built with Next.js 14+, TypeS
 ### 1. Clone the Repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/arththakkar1/next-supabase-authentication.git
 cd supabase-nextjs-auth-template
 ```
 
