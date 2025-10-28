@@ -1,6 +1,6 @@
 <div align="center">
 
-# 💸 ExpenseFlow
+# ExpenseFlow
 
 ### Transform Your Financial Chaos Into Clarity
 
@@ -170,11 +170,11 @@ npm start
 
 <div align="center">
 
-|     Developer      |                          GitHub                          |         Role         |
-| :----------------: | :------------------------------------------------------: | :------------------: |
-|  **Thakkar Arth**  |     [@arththakkar1](https://github.com/arththakkar1)     |    Lead Developer    |
-| **Vaishnav Parth** | [@ParthVaishnavDev](https://github.com/ParthVaishnavDev) | Full Stack Developer |
-|  **Shah Dhruvi**   |     [@DhruviShah29](https://github.com/DhruviShah29)     |  Frontend Developer  |
+|     Developer      |                          GitHub                          |
+| :----------------: | :------------------------------------------------------: |
+|  **Thakkar Arth**  |     [@arththakkar1](https://github.com/arththakkar1)     |
+| **Vaishnav Parth** | [@ParthVaishnavDev](https://github.com/ParthVaishnavDev) |
+|  **Shah Dhruvi**   |     [@DhruviShah29](https://github.com/DhruviShah29)     |
 
 </div>
 
