@@ -1,5 +1,19 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import type { EmailOtpType } from "@supabase/supabase-js"; // 1. Import the type
+
+// 2. Create a type guard to validate the string
+const isEmailOtpType = (type: string | null): type is EmailOtpType => {
+  if (!type) return false;
+  const validTypes: EmailOtpType[] = [
+    "signup",
+    "recovery",
+    "invite",
+    "email_change",
+    "magiclink",
+  ];
+  return (validTypes as string[]).includes(type);
+};
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -7,11 +21,12 @@ export async function GET(request: Request) {
   const type = searchParams.get("type");
   const next = searchParams.get("next") ?? "/dashboard";
 
-  if (token_hash && type) {
+  // 3. Use the type guard in your check
+  if (token_hash && isEmailOtpType(type)) {
     const supabase = await createServerSupabaseClient();
 
     const { error } = await supabase.auth.verifyOtp({
-      type: type as any,
+      type: type,
       token_hash,
     });
 
@@ -26,10 +41,13 @@ export async function GET(request: Request) {
     }
   }
 
-  // Missing token_hash or type
+  // Missing token_hash or type is invalid
+  const errorMessage =
+    token_hash && type
+      ? "Invalid confirmation type"
+      : "Missing confirmation parameters";
+
   return NextResponse.redirect(
-    `${origin}/auth/error?message=${encodeURIComponent(
-      "Missing confirmation parameters"
-    )}`
+    `${origin}/auth/error?message=${encodeURIComponent(errorMessage)}`
   );
 }

@@ -1,7 +1,25 @@
-import SignUpForm from "@/components/auth/SignUpForm";
-import Link from "next/link";
+// app/signup/page.tsx
 
-export default function SignUpPage() {
+import SignUpForm from "@/components/auth/SignUpForm";
+import { createServerSupabaseClient } from "@/lib/supabase/server"; // Use the server client
+import Link from "next/link";
+import { redirect } from "next/navigation"; // Use the server-side redirect
+
+export default async function SignUpPage() {
+  // 1. Create a server-side Supabase client
+  const supabase = await createServerSupabaseClient();
+
+  // 2. Check for an active user session
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // 3. If the user is already logged in, redirect them away
+  if (user) {
+    redirect("/dashboard");
+  }
+
+  // 4. If no user, render the sign-up page
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6">
       {/* Gradient background effects */}

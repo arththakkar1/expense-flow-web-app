@@ -1,10 +1,9 @@
-// lib/supabase/middleware.ts
+// middleware.ts
 
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-export async function updateSession(request: NextRequest) {
-  // This object will be mutated by the Supabase client
+export async function middleware(request: NextRequest) {
   const response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -19,28 +18,31 @@ export async function updateSession(request: NextRequest) {
         get(name: string) {
           return request.cookies.get(name)?.value;
         },
-        // The key change is here: we are now modifying the 'response'
-        // object that was created outside of this scope.
         set(name: string, value: string, options: CookieOptions) {
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          });
+          response.cookies.set({ name, value, ...options });
         },
         remove(name: string, options: CookieOptions) {
-          response.cookies.set({
-            name,
-            value: "",
-            ...options,
-          });
+          response.cookies.set({ name, value: "", ...options });
         },
       },
     }
   );
 
-  // This will refresh the session cookie if needed
+  // This will refresh the session cookie if needed, and is crucial for RLS to work
   await supabase.auth.getUser();
 
   return response;
 }
+
+// Ensure the middleware is only called for relevant paths.
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    "/((?!_next/static|_next/image|favicon.ico).*)",
+  ],
+};

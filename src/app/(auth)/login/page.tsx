@@ -1,7 +1,23 @@
-import SignInForm from "@/components/auth/SignInForm";
-import Link from "next/link";
+// app/login/page.tsx
 
-export default function LoginPage() {
+import SignInForm from "@/components/auth/SignInForm";
+import { createServerSupabaseClient } from "@/lib/supabase/server"; // Use the server client
+import Link from "next/link";
+import { redirect } from "next/navigation"; // Use the server-side redirect
+
+export const dynamic = "force-dynamic";
+
+export default async function LoginPage() {
+  const supabase = await createServerSupabaseClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    redirect("/dashboard");
+  }
+
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6">
       {/* Gradient background effects */}
@@ -14,7 +30,7 @@ export default function LoginPage() {
         <SignInForm />
 
         <p className="text-center mt-6 text-zinc-400">
-          Don't have an account?{" "}
+          Don{"'"}t have an account?{" "}
           <Link
             href="/signup"
             className="text-blue-400 hover:text-blue-300 font-medium transition"
