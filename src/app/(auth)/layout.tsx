@@ -9,8 +9,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "MangaDoc",
-  description: "Read manga online with a clean and modern interface.",
+  title: "Login",
+  description: "",
 };
 
 export default function RootLayout({
