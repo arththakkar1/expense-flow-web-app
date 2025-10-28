@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, CheckCircle, LucideIcon } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
-import { useRouter } from "next/navigation"; // Import useRouter
+import { useRouter } from "next/navigation";
 
 import Header from "@/components/budgets/Header";
 import Overview from "@/components/budgets/Overview";
@@ -16,28 +16,6 @@ import DeleteBudgetDialog from "@/components/budgets/DeleteBudgetDialog";
 import { createClient } from "@/lib/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// --- Supabase and Data Fetching ---
-const supabase = createClient();
-
-// User fetching function for useQuery
-const fetchUser = async () => {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
-};
-
-const fetchBudgetsWithSpent = async (userId: string | undefined) => {
-  if (!userId) return [];
-  const { data, error } = await supabase.rpc("get_budgets_with_spent");
-  if (error) {
-    console.error("Error fetching budgets:", error);
-    throw new Error(error.message);
-  }
-  return data;
-};
-
-// --- Type Definition ---
 export interface Budget {
   id: string;
   categoryName: string;
@@ -49,9 +27,10 @@ export interface Budget {
   endDate: string | null;
   isActive: boolean;
   color: string;
-  category_id: string; // Required for the edit modal
+  category_id: string;
 }
 
+// --- Skeletons (No changes) ---
 function BudgetCardSkeleton() {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 sm:p-6">
@@ -103,7 +82,6 @@ function BudgetsLoadingSkeleton() {
         <Skeleton className="h-24 rounded-xl" />
         <Skeleton className="h-24 rounded-xl" />
       </div>
-      {/* BudgetCard Grid Skeleton */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <BudgetCardSkeleton />
         <BudgetCardSkeleton />
@@ -114,8 +92,9 @@ function BudgetsLoadingSkeleton() {
   );
 }
 
+// --- Main Component ---
 export default function BudgetsPage() {
-  const router = useRouter(); // Initialize router
+  const router = useRouter();
   const [selectedPeriod, setSelectedPeriod] = useState<
     "weekly" | "monthly" | "yearly"
   >("monthly");
@@ -131,19 +110,36 @@ export default function BudgetsPage() {
 
   const queryClient = useQueryClient();
 
+  // MODIFIED: fetchUser logic is now inside queryFn
   const { data: user, isLoading: isUserLoading } = useQuery<User | null>({
     queryKey: ["user"],
-    queryFn: fetchUser,
+    queryFn: async () => {
+      const supabase = createClient(); // Client created here
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      return user;
+    },
     staleTime: Infinity,
   });
 
+  // MODIFIED: fetchBudgetsWithSpent logic is now inside queryFn
   const {
     data: budgets = [],
     isLoading: isBudgetsLoading,
     isError,
   } = useQuery<Budget[]>({
     queryKey: ["budgets", user?.id],
-    queryFn: () => fetchBudgetsWithSpent(user?.id),
+    queryFn: async () => {
+      // `enabled: !!user` already protects this, so user.id is available
+      const supabase = createClient(); // Client created here
+      const { data, error } = await supabase.rpc("get_budgets_with_spent");
+      if (error) {
+        console.error("Error fetching budgets:", error);
+        throw new Error(error.message);
+      }
+      return data;
+    },
     enabled: !!user, // Only run query if user exists
     refetchOnWindowFocus: true,
   });
@@ -158,7 +154,7 @@ export default function BudgetsPage() {
     }
   }, [isUserLoading, user, router]);
 
-  // Memoize calculations
+  // Memoize calculations (No changes)
   const { totalBudget, totalSpent, totalRemaining, overallPercentage } =
     useMemo(() => {
       const totalBudget = budgets.reduce((sum, b) => sum + b.amount, 0);
@@ -169,7 +165,7 @@ export default function BudgetsPage() {
       return { totalBudget, totalSpent, totalRemaining, overallPercentage };
     }, [budgets]);
 
-  // --- Helper Functions ---
+  // --- Helper Functions (No changes) ---
   const getColorClasses = (color: string) => {
     const colors: {
       [key: string]: {
@@ -246,10 +242,12 @@ export default function BudgetsPage() {
     setShowDeleteDialog(true);
   };
 
+  // MODIFIED: Create client inside the handler
   const handleDeleteConfirm = async () => {
     if (!deletingBudget) return;
 
     setIsDeleting(true);
+    const supabase = createClient(); // Client created here
     const { error } = await supabase
       .from("budgets")
       .delete()
@@ -261,18 +259,17 @@ export default function BudgetsPage() {
       alert("Failed to delete budget: " + error.message);
     } else {
       await queryClient.invalidateQueries({ queryKey: ["budgets"] });
-      // Close the modal on success
       setShowDeleteDialog(false);
       setDeletingBudget(null);
     }
   };
 
+  // --- JSX Render (No changes) ---
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <div className="w-full space-y-4 sm:space-y-6 p-4 sm:p-6 lg:p-8">
         <Header setShowAddModal={setShowAddModal} />
 
-        {/* This `isLoading` check now correctly waits for the user first */}
         {isLoading && <BudgetsLoadingSkeleton />}
 
         {isError && (
@@ -281,7 +278,6 @@ export default function BudgetsPage() {
           </div>
         )}
 
-        {/* This block will only render when *both* user and budgets are loaded */}
         {!isLoading && !isError && user && (
           <>
             <Overview
@@ -307,7 +303,6 @@ export default function BudgetsPage() {
         )}
       </div>
 
-      {/* --- Modals & Dialogs --- */}
       <AddBudgetModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}

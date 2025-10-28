@@ -7,11 +7,11 @@ import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import StatsCards from "@/components/dashboard/StatsCards";
 import ChartSecotion from "@/components/dashboard/ChartSecotion";
 import MinTransaction from "@/components/dashboard/MinTransaction";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client"; // Import the function
 import { redirect, useRouter } from "next/navigation";
-
 import { Skeleton } from "@/components/ui/skeleton";
 
+// --- Type Definitions (No Changes) ---
 export interface Category {
   id: string;
   name: string;
@@ -82,69 +82,16 @@ interface CustomTooltipProps {
   payload?: TooltipPayloadItem[];
 }
 
-const supabase = createClient();
+// DELETED: const supabase = createClient();
+// This was the problem.
 
-const fetchUser = async () => {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
-};
+// DELETED: const fetchUser = async () => { ... }
+// Logic moved into useQuery.
 
-const fetchDashboardData = async (userId: string | undefined) => {
-  if (!userId) return null;
+// DELETED: const fetchDashboardData = async (userId) => { ... }
+// Logic moved into useQuery.
 
-  const today = new Date();
-  const firstDayOfMonth = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    1
-  ).toISOString();
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-
-  const [accountsRes, transactionsRes, monthlyTransactionsRes, trendDataRes] =
-    await Promise.all([
-      supabase.from("accounts").select("balance").eq("user_id", userId),
-      supabase
-        .from("transactions")
-        .select(
-          `
-            *,
-            category:categories (
-              id,
-              name,
-              icon,
-              color,
-              type
-            )
-          `
-        )
-        .eq("user_id", userId)
-        .order("date", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(5),
-      supabase
-        .from("transactions")
-        .select("amount, type, date, category:categories(name, color)")
-        .eq("user_id", userId)
-        .gte("date", firstDayOfMonth),
-      supabase
-        .from("transactions")
-        .select("amount, type, date")
-        .eq("user_id", userId)
-        .gte("date", sixMonthsAgo.toISOString()),
-    ]);
-
-  if (accountsRes.error) throw new Error(accountsRes.error.message);
-  if (transactionsRes.error) throw new Error(transactionsRes.error.message);
-  if (monthlyTransactionsRes.error)
-    throw new Error(monthlyTransactionsRes.error.message);
-  if (trendDataRes.error) throw new Error(trendDataRes.error.message);
-
-  return { accountsRes, transactionsRes, monthlyTransactionsRes, trendDataRes };
-};
-
+// --- Skeletons (No Changes) ---
 function StatsCardSkeleton() {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 h-32">
@@ -210,22 +157,95 @@ function MinTransactionSkeleton() {
   );
 }
 
+// --- Main Component ---
 export default function DashboardPage() {
   const router = useRouter();
 
+  // MODIFIED: fetchUser logic moved directly into queryFn
   const { data: user, isLoading: isUserLoading } = useQuery({
     queryKey: ["user"],
-    queryFn: fetchUser,
+    queryFn: async () => {
+      const supabase = createClient(); // Client created here
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      return user;
+    },
     staleTime: Infinity,
   });
 
+  // MODIFIED: fetchDashboardData logic moved directly into queryFn
   const {
     data,
     isLoading: isDataLoading,
     isError,
   } = useQuery({
     queryKey: ["dashboardData", user?.id],
-    queryFn: () => fetchDashboardData(user?.id),
+    queryFn: async () => {
+      const supabase = createClient(); // Client created here
+      const userId = user?.id; // Get user ID from closure
+
+      if (!userId) return null;
+
+      const today = new Date();
+      const firstDayOfMonth = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        1
+      ).toISOString();
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+      const [
+        accountsRes,
+        transactionsRes,
+        monthlyTransactionsRes,
+        trendDataRes,
+      ] = await Promise.all([
+        supabase.from("accounts").select("balance").eq("user_id", userId),
+        supabase
+          .from("transactions")
+          .select(
+            `
+              *,
+              category:categories (
+                id,
+                name,
+                icon,
+                color,
+                type
+              )
+            `
+          )
+          .eq("user_id", userId)
+          .order("date", { ascending: false })
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("transactions")
+          .select("amount, type, date, category:categories(name, color)")
+          .eq("user_id", userId)
+          .gte("date", firstDayOfMonth),
+        supabase
+          .from("transactions")
+          .select("amount, type, date")
+          .eq("user_id", userId)
+          .gte("date", sixMonthsAgo.toISOString()),
+      ]);
+
+      if (accountsRes.error) throw new Error(accountsRes.error.message);
+      if (transactionsRes.error) throw new Error(transactionsRes.error.message);
+      if (monthlyTransactionsRes.error)
+        throw new Error(monthlyTransactionsRes.error.message);
+      if (trendDataRes.error) throw new Error(trendDataRes.error.message);
+
+      return {
+        accountsRes,
+        transactionsRes,
+        monthlyTransactionsRes,
+        trendDataRes,
+      };
+    },
     enabled: !!user,
   });
 
@@ -237,6 +257,7 @@ export default function DashboardPage() {
     }
   }, [isUserLoading, user, router]);
 
+  // --- useMemo and other logic (No Changes) ---
   const { stats, transactions, categorySpending, monthlyTrendData } =
     useMemo(() => {
       if (!data) {
@@ -430,6 +451,7 @@ export default function DashboardPage() {
     return null;
   };
 
+  // --- JSX Render (No Changes) ---
   if (isError) {
     return (
       <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center">

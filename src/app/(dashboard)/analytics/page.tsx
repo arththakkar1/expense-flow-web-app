@@ -10,8 +10,8 @@ import {
   Target,
   Zap,
 } from "lucide-react";
-import type { User } from "@supabase/supabase-js";
-import { createClient } from "../../../lib/supabase/client";
+
+import { createClient } from "../../../lib/supabase/client"; // Import the function
 import { useRouter } from "next/navigation";
 import {
   Stat,
@@ -37,14 +37,10 @@ import {
   eachDayOfInterval,
 } from "date-fns";
 
-const supabase = createClient();
+// const supabase = createClient(); <-- DELETED: This was the problem
 
-const fetchUser = async (): Promise<User | null> => {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
-};
+// const fetchUser = ... <-- DELETED: Moved logic into useQuery
+// const fetchTransactions = ... <-- DELETED: Moved logic into useQuery
 
 type RawTransaction = {
   amount: number;
@@ -57,28 +53,6 @@ type RawTransaction = {
   } | null;
 };
 
-const fetchTransactions = async (
-  userId: string | undefined
-): Promise<RawTransaction[]> => {
-  if (!userId) return [];
-
-  const oneYearAgo = format(subDays(new Date(), 365), "yyyy-MM-dd");
-
-  const { data, error } = await supabase
-    .from("transactions")
-    .select(`amount, type, date, description, categories (name, color)`)
-    .eq("user_id", userId)
-    .gte("date", oneYearAgo)
-    .order("date", { ascending: false });
-
-  if (error) {
-    console.error("Error fetching transactions:", error);
-    throw new Error(error.message);
-  }
-
-  return data as unknown as RawTransaction[];
-};
-
 export default function AnalyticsPage() {
   const router = useRouter();
   const [timeRange, setTimeRange] = useState<
@@ -87,7 +61,14 @@ export default function AnalyticsPage() {
 
   const { data: user, isLoading: isUserLoading } = useQuery({
     queryKey: ["user"],
-    queryFn: fetchUser,
+    queryFn: async () => {
+      // MODIFIED: Create client inside the query function
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      return user;
+    },
     staleTime: Infinity,
   });
 
@@ -97,7 +78,29 @@ export default function AnalyticsPage() {
     isError,
   } = useQuery<RawTransaction[]>({
     queryKey: ["analyticsTransactions", user?.id],
-    queryFn: () => fetchTransactions(user?.id),
+    queryFn: async () => {
+      // MODIFIED: Create client inside the query function
+      const supabase = createClient();
+      const userId = user?.id; // Get user from closure
+
+      if (!userId) return [];
+
+      const oneYearAgo = format(subDays(new Date(), 365), "yyyy-MM-dd");
+
+      const { data, error } = await supabase
+        .from("transactions")
+        .select(`amount, type, date, description, categories (name, color)`)
+        .eq("user_id", userId)
+        .gte("date", oneYearAgo)
+        .order("date", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching transactions:", error);
+        throw new Error(error.message);
+      }
+
+      return data as unknown as RawTransaction[];
+    },
     enabled: !!user,
     staleTime: Infinity,
     refetchOnWindowFocus: false,
@@ -290,7 +293,7 @@ export default function AnalyticsPage() {
 
     for (const t of relevantTransactions) {
       const tDate = new Date(t.date);
-      const dayKey = format(tDate, "E");
+      const dayKey = format(tDate, "E"); // 'E' gives day of week like 'Mon', 'Tue'
       const entry = dataMap.get(dayKey);
 
       if (entry) {

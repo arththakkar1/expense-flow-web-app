@@ -3,77 +3,14 @@
 import React, { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Zap, Star, Calendar, Crown, LogOut } from "lucide-react";
-import { createClient } from "../../../lib/supabase/client";
-import type { User } from "@supabase/supabase-js";
+import { createClient } from "../../../lib/supabase/client"; // Import the function
+
 import { useRouter } from "next/navigation";
-import { StatCardData, Profile, UserStats } from "../../../types/profile";
+import { StatCardData } from "../../../types/profile";
 import { differenceInDays } from "date-fns";
 import Image from "next/image";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const supabase = createClient();
-
-// --- Data Fetching Functions ---
-const fetchUser = async (): Promise<User | null> => {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
-};
-
-const fetchProfile = async (): Promise<Profile | null> => {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  return {
-    id: user.id,
-    full_name: user.user_metadata?.full_name ?? null,
-    email: user.email ?? null,
-    avatar_url: user.user_metadata?.avatar_url ?? null,
-  };
-};
-
-const fetchUserStats = async (
-  userId: string | undefined
-): Promise<UserStats | null> => {
-  if (!userId) return null;
-
-  const { count: totalTransactions, error: tError } = await supabase
-    .from("transactions")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", userId);
-
-  const { count: budgetsCreated, error: bError } = await supabase
-    .from("budgets")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", userId);
-
-  const { data: savingsData } = await supabase
-    .from("transactions")
-    .select("amount")
-    .eq("user_id", userId)
-    .eq("type", "savings");
-
-  const moneySaved =
-    savingsData?.reduce(
-      (sum, transaction) => sum + (transaction.amount || 0),
-      0
-    ) ?? 0;
-
-  if (tError || bError) {
-    throw new Error(tError?.message || bError?.message);
-  }
-
-  return {
-    totalTransactions: totalTransactions ?? 0,
-    budgetsCreated: budgetsCreated ?? 0,
-    moneySaved,
-  };
-};
-
-// --- Skeleton Component ---
 const ProfileSkeleton = () => (
   <div className="animate-pulse">
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 sm:p-8 mb-6">
@@ -100,26 +37,82 @@ const ProfileSkeleton = () => (
   </div>
 );
 
-// --- Main Component ---
 export default function ProfilePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
   const { data: user, isLoading: isLoadingUser } = useQuery({
     queryKey: ["user"],
-    queryFn: fetchUser,
+    queryFn: async () => {
+      const supabase = createClient(); // Client created here
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      return user;
+    },
     staleTime: 5 * 60 * 1000,
   });
 
+  // MODIFIED: fetchProfile logic is now inside queryFn
   const { data: profile, isLoading: isLoadingProfile } = useQuery({
     queryKey: ["profile"],
-    queryFn: fetchProfile,
+    queryFn: async () => {
+      const supabase = createClient(); // Client created here
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      return {
+        id: user.id,
+        full_name: user.user_metadata?.full_name ?? null,
+        email: user.email ?? null,
+        avatar_url: user.user_metadata?.avatar_url ?? null,
+      };
+    },
     enabled: !!user,
   });
 
+  // MODIFIED: fetchUserStats logic is now inside queryFn
   const { data: userStats, isLoading: isLoadingStats } = useQuery({
     queryKey: ["userStats", user?.id],
-    queryFn: () => fetchUserStats(user?.id),
+    queryFn: async () => {
+      const supabase = createClient(); // Client created here
+      const userId = user?.id; // Get user from closure
+      if (!userId) return null;
+
+      const { count: totalTransactions, error: tError } = await supabase
+        .from("transactions")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId);
+
+      const { count: budgetsCreated, error: bError } = await supabase
+        .from("budgets")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId);
+
+      const { data: savingsData } = await supabase
+        .from("transactions")
+        .select("amount")
+        .eq("user_id", userId)
+        .eq("type", "savings");
+
+      const moneySaved =
+        savingsData?.reduce(
+          (sum, transaction) => sum + (transaction.amount || 0),
+          0
+        ) ?? 0;
+
+      if (tError || bError) {
+        throw new Error(tError?.message || bError?.message);
+      }
+
+      return {
+        totalTransactions: totalTransactions ?? 0,
+        budgetsCreated: budgetsCreated ?? 0,
+        moneySaved,
+      };
+    },
     enabled: !!user,
   });
 
@@ -129,12 +122,15 @@ export default function ProfilePage() {
     }
   }, [isLoadingUser, user, router]);
 
+  // MODIFIED: Create client inside the handler
   const handleSignOut = async () => {
+    const supabase = createClient(); // Client created here
     await supabase.auth.signOut();
     queryClient.clear();
     router.push("/login");
   };
 
+  // --- Logic and Mappings (No Changes) ---
   const daysActive = user
     ? differenceInDays(new Date(), new Date(user.created_at))
     : 0;
@@ -170,6 +166,7 @@ export default function ProfilePage() {
 
   const isLoading = isLoadingUser || isLoadingProfile || isLoadingStats;
 
+  // --- JSX Render (No Changes) ---
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <div className="w-full space-y-6 p-4 sm:p-6 lg:p-8">

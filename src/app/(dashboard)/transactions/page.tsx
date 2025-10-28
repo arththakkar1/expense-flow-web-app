@@ -18,8 +18,6 @@ import { UpdateTransactionData } from "@/lib/supabase/queries";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 
-// --- Types & Interfaces ---
-// (In a real app, move to a central types/transactions.ts file)
 interface TransactionForEdit {
   id: string;
   user_id: string;

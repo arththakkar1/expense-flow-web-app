@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import ErrorDisplay from "./ErrorDisplay"; // Import your new client component
+import ErrorDisplay from "./ErrorDisplay";
 
 function ErrorLoadingFallback() {
   return (
