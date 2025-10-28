@@ -37,11 +37,6 @@ import {
   eachDayOfInterval,
 } from "date-fns";
 
-// const supabase = createClient(); <-- DELETED: This was the problem
-
-// const fetchUser = ... <-- DELETED: Moved logic into useQuery
-// const fetchTransactions = ... <-- DELETED: Moved logic into useQuery
-
 type RawTransaction = {
   amount: number;
   type: "income" | "expense";
@@ -62,7 +57,6 @@ export default function AnalyticsPage() {
   const { data: user, isLoading: isUserLoading } = useQuery({
     queryKey: ["user"],
     queryFn: async () => {
-      // MODIFIED: Create client inside the query function
       const supabase = createClient();
       const {
         data: { user },
