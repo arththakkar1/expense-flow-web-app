@@ -1,18 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import type { EmailOtpType } from "@supabase/supabase-js";
-
-const isEmailOtpType = (type: string | null): type is EmailOtpType => {
-  if (!type) return false;
-  const validTypes: EmailOtpType[] = [
-    "signup",
-    "recovery",
-    "invite",
-    "email_change",
-    "magiclink",
-  ];
-  return (validTypes as string[]).includes(type);
-};
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -20,11 +7,11 @@ export async function GET(request: Request) {
   const type = searchParams.get("type");
   const next = searchParams.get("next") ?? "/dashboard";
 
-  if (token_hash && isEmailOtpType(type)) {
+  if (token_hash && type) {
     const supabase = await createServerSupabaseClient();
 
     const { error } = await supabase.auth.verifyOtp({
-      type: type,
+      type: type as "email",
       token_hash,
     });
 
@@ -37,12 +24,10 @@ export async function GET(request: Request) {
     }
   }
 
-  const errorMessage =
-    token_hash && type
-      ? "Invalid confirmation type"
-      : "Missing confirmation parameters";
-
+  // Missing token_hash or type
   return NextResponse.redirect(
-    `${origin}/auth/error?message=${encodeURIComponent(errorMessage)}`
+    `${origin}/auth/error?message=${encodeURIComponent(
+      "Missing confirmation parameters"
+    )}`
   );
 }
