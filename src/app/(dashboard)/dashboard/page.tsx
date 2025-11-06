@@ -250,7 +250,7 @@ export default function DashboardPage() {
   }, [isUserLoading, user, router]);
 
   // --- MODIFIED: Extract 'accounts' from useMemo ---
-  const { stats, transactions, categorySpending, monthlyTrendData, accounts } =
+  const { stats, transactions, categorySpending, monthlyTrendData } =
     useMemo(() => {
       if (!data) {
         return {
@@ -460,10 +460,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-zinc-950 text-white">
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* --- MODIFIED: Pass 'accounts' prop down --- */}
-        <DashboardHeader
-          user={user || null}
-          accounts={isLoading ? [] : accounts}
-        />
+        <DashboardHeader user={user || null} />
 
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
