@@ -1,10 +1,12 @@
 import { Budget } from "@/app/(dashboard)/budgets/page";
-import { Calendar, Edit, MoreVertical, Target, Trash2 } from "lucide-react";
+import { Calendar, Edit, Target, Trash2 } from "lucide-react";
 import React from "react";
 import { LucideIcon } from "lucide-react";
+import { Category } from "@/app/(dashboard)/dashboard/page";
 
 type BudgetCardType = {
   budgets: Budget[];
+  // ... (rest of your props)
   getStatusInfo: (
     spent: number,
     amount: number
@@ -20,10 +22,63 @@ type BudgetCardType = {
     border: string;
     progress: string;
   };
-  // Prop types expect the full Budget object
   onEdit: (budget: Budget) => void;
   onDelete: (budget: Budget) => void;
 };
+
+// Your predefined categories (same as you provided)
+const PREDEFINED_CATEGORIES: Category[] = [
+  // ... (your list of categories)
+  {
+    id: "5d3b340a-16c6-4b3a-80c3-6cdd550d13ab",
+    name: "Food & Groceries",
+    icon: "🍔",
+    color: "#f97316",
+    type: "expense",
+  },
+  {
+    id: "6e14b707-21a0-45ca-af5b-9321af13e6d6",
+    name: "Entertainment",
+    icon: "🎬",
+    color: "#ec4899",
+    type: "expense",
+  },
+  {
+    id: "9487f269-7984-4460-8297-ae2a5410f4f9",
+    name: "Salary",
+    icon: "💼",
+    color: "#10b981",
+    type: "income",
+  },
+  {
+    id: "a64ba9e1-6f81-4c77-b77f-f6c80699f744",
+    name: "Freelance",
+    icon: "💻",
+    color: "#34d399",
+    type: "income",
+  },
+  {
+    id: "b0bc88c3-9ac1-4180-add8-8fa25cc3a1fa",
+    name: "Shopping",
+    icon: "🛍️",
+    color: "#8b5cf6",
+    type: "expense",
+  },
+  {
+    id: "bf9402e7-f762-4973-b107-87dca8721730",
+    name: "Transport",
+    icon: "🚌",
+    color: "#0ea5e9",
+    type: "expense",
+  },
+  {
+    id: "fa8b5739-05c1-48be-b9ec-636863c22d66",
+    name: "Utilities",
+    icon: "💡",
+    color: "#eab308",
+    type: "expense",
+  },
+];
 
 function BudgetCard({
   budgets,
@@ -43,6 +98,17 @@ function BudgetCard({
           const StatusIcon = statusInfo.icon;
           const colorClasses = getColorClasses(budget.color);
 
+          // --- THIS IS THE NEW LOGIC ---
+          // Find the matching category from your array
+          const category = PREDEFINED_CATEGORIES.find(
+            (cat) => cat.id === budget.category_id
+          );
+
+          // Use the found data, or provide a fallback
+          const categoryIcon = category ? category.icon : "❓";
+          const categoryName = category ? category.name : "Unknown Category";
+          // --- END OF NEW LOGIC ---
+
           return (
             <div
               key={budget.id}
@@ -57,22 +123,22 @@ function BudgetCard({
                   <div
                     className={`w-12 h-12 ${colorClasses.bg} rounded-xl flex items-center justify-center text-2xl`}
                   >
-                    {budget.categoryIcon}
+                    {/* Use the new categoryIcon variable */}
+                    {categoryIcon}
                   </div>
                   <div>
                     <h3 className="font-semibold text-white">
-                      {budget.categoryName}
+                      {/* Use the new categoryName variable */}
+                      {categoryName}
                     </h3>
                     <p className="text-xs text-zinc-500 capitalize">
                       {budget.period} budget
                     </p>
                   </div>
                 </div>
+                {/* ... (rest of the card) ... */}
                 <div className="flex items-center gap-2">
                   <StatusIcon className={`w-5 h-5 ${statusInfo.color}`} />
-                  <button className="p-2 hover:bg-zinc-800 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
-                    <MoreVertical className="w-4 h-4 text-zinc-400" />
-                  </button>
                 </div>
               </div>
 
@@ -130,14 +196,12 @@ function BudgetCard({
                 </div>
 
                 <div className="flex items-center gap-1">
-                  {/* Pass the full budget object */}
                   <button
                     onClick={() => onEdit(budget)}
                     className="p-1.5 hover:bg-zinc-800 rounded transition-colors"
                   >
                     <Edit className="w-4 h-4 text-zinc-400 hover:text-white" />
                   </button>
-                  {/* Pass the full budget object */}
                   <button
                     onClick={() => onDelete(budget)}
                     className="p-1.5 hover:bg-red-500/10 rounded transition-colors"

@@ -123,7 +123,6 @@ export default function BudgetsPage() {
     staleTime: Infinity,
   });
 
-  // MODIFIED: fetchBudgetsWithSpent logic is now inside queryFn
   const {
     data: budgets = [],
     isLoading: isBudgetsLoading,
@@ -131,8 +130,7 @@ export default function BudgetsPage() {
   } = useQuery<Budget[]>({
     queryKey: ["budgets", user?.id],
     queryFn: async () => {
-      // `enabled: !!user` already protects this, so user.id is available
-      const supabase = createClient(); // Client created here
+      const supabase = createClient();
       const { data, error } = await supabase.rpc("get_budgets_with_spent");
       if (error) {
         console.error("Error fetching budgets:", error);
@@ -140,21 +138,18 @@ export default function BudgetsPage() {
       }
       return data;
     },
-    enabled: !!user, // Only run query if user exists
+    enabled: !!user,
     refetchOnWindowFocus: true,
   });
 
-  // Combined loading state
   const isLoading = isUserLoading || isBudgetsLoading;
 
-  // Client-side auth check
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push("/login");
     }
   }, [isUserLoading, user, router]);
 
-  // Memoize calculations (No changes)
   const { totalBudget, totalSpent, totalRemaining, overallPercentage } =
     useMemo(() => {
       const totalBudget = budgets.reduce((sum, b) => sum + b.amount, 0);

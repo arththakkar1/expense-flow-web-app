@@ -1,4 +1,5 @@
 // Your existing imports
+
 import { createClient, supabase } from "./client";
 
 // Create a single instance
@@ -13,21 +14,18 @@ function getSupabaseClient() {
 
 export type TransactionType = "expense" | "income" | "transfer";
 
-// Data structure for inserting a NEW transaction
 export type NewTransactionData = {
   user_id: string;
-  account_id: string;
   category_id: string | null;
   type: TransactionType;
   amount: number;
+  account_id?: string;
   description: string;
-  date: string; // Format: 'yyyy-MM-dd'
+  date: string;
   notes?: string | null;
   tags?: string[] | null;
 };
 
-// Data structure for UPDATING a transaction (used in EditTransactionDialog)
-// Note: This is equivalent to Partial<NewTransactionData> plus 'transaction_date' for the date field
 export type UpdateTransactionData = Partial<{
   user_id: string;
   account_id: string;
@@ -42,11 +40,12 @@ export type UpdateTransactionData = Partial<{
 
 export async function getTransactions(userId: string): Promise<Transaction[]> {
   const supabase = createClient();
+
   const { data, error } = await supabase
     .from("transactions")
-    .select("*, category(name)") // Join with categories to get category name
+    .select("*, category(name)")
     .eq("user_id", userId)
-    .order("date", { ascending: false }); // Order by date, newest first
+    .order("date", { ascending: false });
 
   if (error) {
     console.error("Error fetching transactions for export:", error);
@@ -77,11 +76,22 @@ export type Account = {
  * Inserts a new transaction into the database.
  */
 export const addTransaction = async (transactionData: NewTransactionData) => {
-  const supabase = getSupabaseClient();
-
+  const supabase = await getSupabaseClient();
+  const user = await supabase.auth.getUser();
+  console.log("Adding transaction with data:", transactionData);
   const { data, error } = await supabase
     .from("transactions")
-    .insert(transactionData)
+    .insert({
+      user_id: user.data.user?.id,
+      category_id: transactionData.category_id,
+
+      type: transactionData.type,
+      amount: transactionData.amount,
+      description: transactionData.description,
+      date: transactionData.date,
+      notes: transactionData.notes,
+      tags: transactionData.tags,
+    })
     .select()
     .single();
 
@@ -98,7 +108,6 @@ export const addTransaction = async (transactionData: NewTransactionData) => {
  */
 export const updateTransaction = async (
   transactionId: string,
-  // Using UpdateTransactionData here (which is Partial)
   transactionData: UpdateTransactionData
 ) => {
   const supabase = getSupabaseClient();

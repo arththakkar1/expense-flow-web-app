@@ -20,12 +20,12 @@ interface BudgetCategory {
 }
 
 // Fetcher function for categories
-const fetchExpenseCategories = async (userId: string) => {
+const fetchExpenseCategories = async () => {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("categories")
     .select("id, name, icon")
-    .eq("user_id", userId)
+    .eq("type", "expense")
     .eq("type", "expense")
     .order("name", { ascending: true });
 
@@ -59,7 +59,7 @@ export default function AddBudgetModal({
     error: categoriesError,
   } = useQuery<BudgetCategory[]>({
     queryKey: ["expense_categories", user?.id],
-    queryFn: () => fetchExpenseCategories(user!.id),
+    queryFn: () => fetchExpenseCategories(),
     enabled: !!user && isOpen, // Only fetch when modal is open and user exists
   });
 
@@ -137,7 +137,7 @@ export default function AddBudgetModal({
                 id="category"
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full bg-zinc-800 border focus:ring-2 focus:outline-none transition border-zinc-700 text-white rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
                 required
               >
                 <option value="" disabled>
@@ -167,7 +167,7 @@ export default function AddBudgetModal({
               id="amount"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none bg-zinc-800 border border-zinc-700 text-white rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full [appearance:textfield] focus:ring-2 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none bg-zinc-800 border border-zinc-700 text-white rounded-lg p-2.5 focus:outline-none transition focus:ring-blue-500 focus:border-blue-500"
               placeholder="e.g., 5000"
               required
               min="0"
@@ -188,7 +188,7 @@ export default function AddBudgetModal({
               onChange={(e) =>
                 setPeriod(e.target.value as "weekly" | "monthly" | "yearly")
               }
-              className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full bg-zinc-800 border focus:ring-2 border-zinc-700 text-white rounded-lg p-2.5  focus:outline-none transition focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="weekly">Weekly</option>
               <option value="monthly">Monthly</option>

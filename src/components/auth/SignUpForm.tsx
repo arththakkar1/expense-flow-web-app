@@ -25,6 +25,7 @@ export default function SignUpForm() {
     });
 
     if (error) {
+      console.log("Sign up error:", error);
       setMessage(error.message);
     } else {
       setMessage("Check your email to confirm your account!");

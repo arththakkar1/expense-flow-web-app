@@ -7,11 +7,13 @@ import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import StatsCards from "@/components/dashboard/StatsCards";
 import ChartSecotion from "@/components/dashboard/ChartSecotion";
 import MinTransaction from "@/components/dashboard/MinTransaction";
-import { createClient } from "@/lib/supabase/client"; // Import the function
+import { createClient } from "@/lib/supabase/client";
 import { redirect, useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
+// --- NEW: Import the Account type ---
+import type { Account } from "@/lib/supabase/queries";
 
-// --- Type Definitions (No Changes) ---
+// --- Type Definitions ---
 export interface Category {
   id: string;
   name: string;
@@ -81,15 +83,6 @@ interface CustomTooltipProps {
   active?: boolean;
   payload?: TooltipPayloadItem[];
 }
-
-// DELETED: const supabase = createClient();
-// This was the problem.
-
-// DELETED: const fetchUser = async () => { ... }
-// Logic moved into useQuery.
-
-// DELETED: const fetchDashboardData = async (userId) => { ... }
-// Logic moved into useQuery.
 
 // --- Skeletons (No Changes) ---
 function StatsCardSkeleton() {
@@ -161,11 +154,10 @@ function MinTransactionSkeleton() {
 export default function DashboardPage() {
   const router = useRouter();
 
-  // MODIFIED: fetchUser logic moved directly into queryFn
   const { data: user, isLoading: isUserLoading } = useQuery({
     queryKey: ["user"],
     queryFn: async () => {
-      const supabase = createClient(); // Client created here
+      const supabase = createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -174,7 +166,6 @@ export default function DashboardPage() {
     staleTime: Infinity,
   });
 
-  // MODIFIED: fetchDashboardData logic moved directly into queryFn
   const {
     data,
     isLoading: isDataLoading,
@@ -182,8 +173,8 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: ["dashboardData", user?.id],
     queryFn: async () => {
-      const supabase = createClient(); // Client created here
-      const userId = user?.id; // Get user ID from closure
+      const supabase = createClient();
+      const userId = user?.id;
 
       if (!userId) return null;
 
@@ -202,7 +193,8 @@ export default function DashboardPage() {
         monthlyTransactionsRes,
         trendDataRes,
       ] = await Promise.all([
-        supabase.from("accounts").select("balance").eq("user_id", userId),
+        // --- MODIFIED: Select all account fields ---
+        supabase.from("accounts").select("*").eq("user_id", userId),
         supabase
           .from("transactions")
           .select(
@@ -257,8 +249,8 @@ export default function DashboardPage() {
     }
   }, [isUserLoading, user, router]);
 
-  // --- useMemo and other logic (No Changes) ---
-  const { stats, transactions, categorySpending, monthlyTrendData } =
+  // --- MODIFIED: Extract 'accounts' from useMemo ---
+  const { stats, transactions, categorySpending, monthlyTrendData, accounts } =
     useMemo(() => {
       if (!data) {
         return {
@@ -266,6 +258,7 @@ export default function DashboardPage() {
           transactions: [],
           categorySpending: [],
           monthlyTrendData: [],
+          accounts: [], // --- NEW: Default empty array
         };
       }
 
@@ -356,6 +349,7 @@ export default function DashboardPage() {
         transactions: (transactionsRes.data as Transaction[]) ?? [],
         categorySpending: categorySpendingData,
         monthlyTrendData: trendChartData,
+        accounts: (accountsRes.data as Account[]) ?? [], // --- NEW: Pass out the accounts
       };
     }, [data]);
 
@@ -451,7 +445,6 @@ export default function DashboardPage() {
     return null;
   };
 
-  // --- JSX Render (No Changes) ---
   if (isError) {
     return (
       <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center">
@@ -466,7 +459,11 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <DashboardHeader user={user || null} />
+        {/* --- MODIFIED: Pass 'accounts' prop down --- */}
+        <DashboardHeader
+          user={user || null}
+          accounts={isLoading ? [] : accounts}
+        />
 
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

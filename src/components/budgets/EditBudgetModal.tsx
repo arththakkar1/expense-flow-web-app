@@ -94,7 +94,7 @@ export default function EditBudgetModal({
               id="edit-amount"
               value={amount}
               onChange={(e) => setAmount(Number(e.target.value))}
-              className="w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none bg-zinc-800 border border-zinc-700 text-white rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full [appearance:textfield] focus:outline-none  [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none bg-zinc-800 border border-zinc-700 text-white rounded-lg p-2.5 focus:ring-blue-500 focus:ring-2 focus:border-blue-500"
               placeholder="e.g., 5000"
               required
               min="0"
@@ -113,7 +113,7 @@ export default function EditBudgetModal({
               id="edit-period"
               value={period}
               onChange={(e) => setPeriod(e.target.value as Budget["period"])}
-              className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full bg-zinc-800 border focus:ring-2 focus:outline-none border-zinc-700 text-white rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="daily">Daily</option>
               <option value="weekly">Weekly</option>

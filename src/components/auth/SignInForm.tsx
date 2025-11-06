@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function SignInForm() {
+export default function AuthForm() {
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -11,23 +12,37 @@ export default function SignInForm() {
 
   const supabase = createClient();
 
-  const handleEmailSignIn = async (e: React.FormEvent) => {
+  const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage("");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    if (isSignUp) {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
 
-    if (error) {
-      setMessage(error.message);
+      if (error) {
+        console.log("Sign up error:", error);
+        setMessage(error.message);
+      } else {
+        setMessage(
+          "Signed up successfully! Please check your email to verify."
+        );
+      }
     } else {
-      setMessage("Signed in successfully!");
-      window.location.href = "/dashboard";
-    }
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
+      if (error) {
+        setMessage(error.message);
+      } else {
+        window.location.href = "/dashboard";
+      }
+    }
     setLoading(false);
   };
 
@@ -50,11 +65,17 @@ export default function SignInForm() {
     <div className="w-full max-w-md mx-auto">
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-white mb-2">Welcome back</h2>
-          <p className="text-zinc-400">Sign in to continue to your account</p>
+          <h2 className="text-3xl font-bold text-white mb-2">
+            {isSignUp ? "Create an account" : "Welcome back"}
+          </h2>
+          <p className="text-zinc-400">
+            {isSignUp
+              ? "Enter your details to get started"
+              : "Sign in to continue to your account"}
+          </p>
         </div>
 
-        <form onSubmit={handleEmailSignIn} className="space-y-5">
+        <form onSubmit={handleEmailAuth} className="space-y-5">
           <div>
             <label
               htmlFor="email"
@@ -114,10 +135,12 @@ export default function SignInForm() {
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                Signing in...
+                {isSignUp ? "Creating account..." : "Signing in..."}
               </span>
+            ) : isSignUp ? (
+              "Sign Up"
             ) : (
-              "Sign in"
+              "Sign In"
             )}
           </button>
         </form>
@@ -159,6 +182,21 @@ export default function SignInForm() {
             {message}
           </div>
         )}
+
+        <div className="text-center text-sm text-zinc-400 mt-6">
+          {isSignUp ? "Already have an account? " : "Don't have an account? "}
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => {
+              setIsSignUp(!isSignUp);
+              setMessage("");
+            }}
+            className="font-medium text-blue-500 hover:underline disabled:opacity-50"
+          >
+            {isSignUp ? "Sign In" : "Sign Up"}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -13,13 +13,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  addTransaction,
-  getUserAccounts,
-  NewTransactionData,
-} from "@/lib/supabase/queries";
+import { addTransaction, NewTransactionData } from "@/lib/supabase/queries";
 
-// Type definitions
 type Category = {
   id: string;
   name: string;
@@ -28,7 +23,6 @@ type Category = {
   color: string;
 };
 
-// Predefined categories
 const PREDEFINED_CATEGORIES: Category[] = [
   {
     id: "5d3b340a-16c6-4b3a-80c3-6cdd550d13ab",
@@ -81,17 +75,16 @@ const PREDEFINED_CATEGORIES: Category[] = [
   },
 ];
 
-// Animation variants
 const overlayVariants = {
   visible: { opacity: 1 },
   hidden: { opacity: 0 },
 };
+
 const dialogVariants = {
   visible: { scale: 1, opacity: 1, y: 0 },
   hidden: { scale: 0.95, opacity: 0, y: 20 },
 };
 
-// "Add Transaction" Dialog
 const AddTransactionDialog = ({
   isOpen,
   onClose,
@@ -105,41 +98,35 @@ const AddTransactionDialog = ({
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [type, setType] = useState<"expense" | "income">("expense");
-  const [accountId, setAccountId] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (isOpen && user) {
-      const fetchDataForForm = async () => {
-        const accountsData = await getUserAccounts(user.id);
-        if (accountsData && accountsData.length > 0) {
-          setAccountId(accountsData[0].id);
-        }
-      };
-      fetchDataForForm();
-    }
-  }, [isOpen, user]);
-
-  // AFTER: More targeted and cleaner
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !accountId || !date) return;
+
+    if (!user || !date) {
+      console.error("Submit failed: Missing user or date");
+      return;
+    }
+
     setIsSubmitting(true);
+
     const transactionData: NewTransactionData = {
       description,
       amount: parseFloat(amount),
       date: format(date, "yyyy-MM-dd"),
+      account_id: "default-account-id", // Replace with actual account ID logic
       type,
       user_id: user.id,
-      account_id: accountId,
       category_id: categoryId || null,
     };
+
+    console.log("Submitting transaction:", transactionData);
+
     try {
       await addTransaction(transactionData);
 
-      // Invalidate each query key separately
       await queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
       await queryClient.invalidateQueries({ queryKey: ["transactions"] });
       await queryClient.invalidateQueries({ queryKey: ["budgets"] });
@@ -147,9 +134,16 @@ const AddTransactionDialog = ({
         queryKey: ["analyticsTransactions"],
       });
 
-      onClose(); // Close the dialog after everything is done
+      // Reset form
+      setDescription("");
+      setAmount("");
+      setDate(new Date());
+      setCategoryId("");
+
+      onClose();
     } catch (error) {
       console.error("Failed to add transaction", error);
+      alert("Failed to add transaction. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -158,22 +152,19 @@ const AddTransactionDialog = ({
   const filteredCategories = PREDEFINED_CATEGORIES.filter(
     (c) => c.type === type
   );
-  // --- New useEffect for handling Escape key ---
+
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         onClose();
       }
     };
-
-    // Add the event listener when the component mounts (or isOpen becomes true)
     document.addEventListener("keydown", handleEscape);
-
-    // Clean up the event listener when the component unmounts
     return () => {
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [onClose]); // Re-run the effect if the onClose function changes
+  }, [onClose]);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -201,6 +192,7 @@ const AddTransactionDialog = ({
             <h2 className="text-2xl font-bold mb-6 text-white">
               Add New Transaction
             </h2>
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-1">
@@ -211,10 +203,12 @@ const AddTransactionDialog = ({
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
+                  step="0.01"
                   className="w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
                   required
                 />
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-1">
                   Description
@@ -228,6 +222,7 @@ const AddTransactionDialog = ({
                   required
                 />
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-1">
                   Type
@@ -243,6 +238,7 @@ const AddTransactionDialog = ({
                   <option value="income">Income</option>
                 </select>
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-1">
                   Category (Optional)
@@ -260,6 +256,7 @@ const AddTransactionDialog = ({
                   ))}
                 </select>
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-1">
                   Date
@@ -287,6 +284,7 @@ const AddTransactionDialog = ({
                   </PopoverContent>
                 </Popover>
               </div>
+
               <button
                 type="submit"
                 disabled={isSubmitting}
@@ -302,12 +300,13 @@ const AddTransactionDialog = ({
   );
 };
 
-// Main Header Component
 interface DashboardHeaderProps {
   user: User | null;
 }
+
 export default function DashboardHeader({ user }: DashboardHeaderProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
   return (
     <>
       <div>
