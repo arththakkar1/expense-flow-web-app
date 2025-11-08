@@ -1,18 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import {
-  useQuery,
-  useQueryClient,
-  useMutation, // Import useMutation
-} from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { DollarSign, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
-import { createClient } from "../../../lib/supabase/client";
-import Header from "../../../components/transaction/Header";
-import StatsCard from "../../../components/transaction/StatsCard";
-import Filters from "../../../components/transaction/Filters";
-import Transactions from "../../../components/transaction/Transactions";
+import { createClient } from "@/lib/supabase/client";
+import Header from "@/components/transaction/Header"; // Use the corrected Header component
+import StatsCard from "@/components/transaction/StatsCard";
+import Filters from "@/components/transaction/Filters";
+import Transactions from "@/components/transaction/Transactions";
 import EditTransactionDialog from "@/components/transaction/EditTransactionDialog";
 import { UpdateTransactionData } from "@/lib/supabase/queries";
 import { Button } from "@/components/ui/button";
@@ -61,6 +57,7 @@ interface AggregatedStats {
   totalExpenses: number;
 }
 
+// Ensure this structure matches the JOIN result from Supabase
 interface DetailedRawTransaction {
   id: string;
   description: string;
@@ -76,8 +73,6 @@ type CategoryName = string;
 type FilterType = "all" | "income" | "expense";
 type DateRangeType = "all" | "week" | "month" | "year";
 
-// --- Constants & Helpers ---
-// (In a real app, move to lib/utils.ts or similar)
 const ITEMS_PER_PAGE = 8;
 const DEBOUNCE_DELAY = 300;
 const supabase = createClient();
@@ -87,6 +82,7 @@ const getDateBoundaries = (range: DateRangeType) => {
   const start = new Date(end);
 
   if (range === "all") {
+    // Note: Using a very old date for 'all' is common for Supabase/Postgres range queries
     return { start: "2000-01-01T00:00:00Z", end: end.toISOString() };
   } else if (range === "week") {
     start.setDate(end.getDate() - 7);
@@ -99,7 +95,6 @@ const getDateBoundaries = (range: DateRangeType) => {
 };
 
 // --- Data Fetching Functions ---
-// (In a real app, move to lib/supabase/queries.ts)
 const fetchUser = async (): Promise<User | null> => {
   const {
     data: { user },
@@ -134,11 +129,13 @@ const fetchTransactionStats = async ({
   const totalIncome =
     data
       ?.filter((t) => t.type === "income")
+      // Use Math.abs() as amount is stored as positive in DB
       .reduce((sum, t) => sum + Math.abs(t.amount || 0), 0) ?? 0;
 
   const totalExpenses =
     data
       ?.filter((t) => t.type === "expense")
+      // Use Math.abs() as amount is stored as positive in DB
       .reduce((sum, t) => sum + Math.abs(t.amount || 0), 0) ?? 0;
 
   return { totalIncome, totalExpenses };
@@ -165,14 +162,17 @@ const fetchTransactions = async ({
         count: "exact",
       }
     )
-    .eq("user_id", userId as string)
-    .order("date", { ascending: false });
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  console.log("Value:", query);
 
   if (filter !== "all") query = query.eq("type", filter as string);
   query = query.gte("date", start).lte("date", end);
 
   if (searchQuery) {
     const searchString = `%${searchQuery as string}%`;
+    // Filter by description OR category name
     query = query.or(
       `description.ilike.${searchString},categories.name.ilike.${searchString}`
     );
@@ -181,16 +181,15 @@ const fetchTransactions = async ({
   const { data, error, count } = await query.range(from, to);
   if (error) throw error;
 
-  // --- THIS IS THE FIX ---
-  // Use the (data as unknown as DetailedRawTransaction[]) double assertion
+  // Type assertion for correct data mapping
   const mappedData: TransactionWithCategory[] = (
     (data as unknown as DetailedRawTransaction[]) || []
   ).map((t) => ({
-    // `t` is now correctly inferred as DetailedRawTransaction
     id: t.id,
     title: t.description || "N/A",
     category: (t.categories && t.categories.name) || "Uncategorized",
     date: t.date,
+    // Convert DB positive amount to positive/negative based on type
     amount: t.type === "expense" ? -Math.abs(t.amount) : Math.abs(t.amount),
     type: t.type,
     status: "completed" as const,
@@ -200,13 +199,11 @@ const fetchTransactions = async ({
     category_id: t.category_id,
     transaction_date: t.date,
   }));
-  // --- END OF FIX ---
 
   return { transactions: mappedData, count: count || 0 };
 };
 
 // --- Custom Delete Dialog Component ---
-// (In a real app, move to components/transaction/DeleteConfirmationDialog.tsx)
 interface DeleteDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -279,7 +276,7 @@ export default function TransactionsPage() {
     string | null
   >(null);
 
-  // --- REFACTORED: Debounce search query ---
+  // Debounce search query
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
@@ -293,8 +290,7 @@ export default function TransactionsPage() {
   // Reset page to 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedFilter, dateRange, debouncedSearchQuery]); // Use debounced query
-  // ---
+  }, [selectedFilter, dateRange, debouncedSearchQuery]);
 
   // --- Data Queries ---
   const { data: user, isLoading: isLoadingUser } = useQuery<User | null>({
@@ -322,16 +318,18 @@ export default function TransactionsPage() {
       selectedFilter,
       dateRange,
       currentPage,
-      debouncedSearchQuery, // Use debounced query for fetching
+      debouncedSearchQuery,
     ],
     queryFn: fetchTransactions,
     enabled: !!user,
   });
 
-  // --- REFACTORED: Mutations ---
-  const invalidateQueries = () => {
-    queryClient.invalidateQueries({ queryKey: ["transactions"] });
-    queryClient.invalidateQueries({ queryKey: ["transactionStats"] });
+  // --- Mutations ---
+  const invalidateQueries = (userId?: string) => {
+    if (!userId) return;
+    // Invalidate queries relevant to the current user
+    queryClient.invalidateQueries({ queryKey: ["transactions", userId] });
+    queryClient.invalidateQueries({ queryKey: ["transactionStats", userId] });
     queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
   };
 
@@ -341,6 +339,7 @@ export default function TransactionsPage() {
       const { error } = await supabase
         .from("transactions")
         .update({
+          // Ensure we send the absolute amount back to the DB
           amount: Math.abs(transactionData.amount!),
           description: transactionData.description,
           category_id: transactionData.category_id,
@@ -352,7 +351,7 @@ export default function TransactionsPage() {
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
-      invalidateQueries();
+      invalidateQueries(user?.id);
       setIsEditDialogOpen(false);
       setEditingTransaction(null);
     },
@@ -372,15 +371,14 @@ export default function TransactionsPage() {
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
-      invalidateQueries();
-      handleCloseDeleteDialog(); // Close dialog on success
+      invalidateQueries(user?.id);
+      handleCloseDeleteDialog();
     },
     onError: (error) => {
       alert("Failed to delete transaction: " + error.message);
       console.error("Delete failed:", error);
     },
   });
-  // ---
 
   // Auth Effect
   useEffect(() => {
@@ -393,9 +391,6 @@ export default function TransactionsPage() {
   const isLoading = isLoadingUser || isLoadingTransactions || isLoadingStats;
   const transactionsData = useMemo(() => data?.transactions ?? [], [data]);
   const totalCount = data?.count ?? 0;
-
-  // --- REFACTORED: Removed client-side filtering `useMemo` ---
-  // The `transactionsData` is now the authoritative, filtered list from the server.
 
   const stats: StatCardData[] = useMemo(() => {
     const totalIncome = statsData?.totalIncome ?? 0;
@@ -427,7 +422,6 @@ export default function TransactionsPage() {
         label: "Net Balance",
         value: formatCurrency(netBalance),
         change: "",
-        // --- REFACTORED: Fixed type typo ---
         trend: (netBalance >= 0 ? "up" : "down") as "up" | "down",
         icon: DollarSign,
       },
@@ -465,7 +459,6 @@ export default function TransactionsPage() {
     }
   };
 
-  // REFACTORED: Use `mutateAsync` to return a promise to the dialog
   const handleUpdateTransaction = async (payload: MutationPayload) => {
     await updateTransactionMutation.mutateAsync(payload);
   };
@@ -475,7 +468,6 @@ export default function TransactionsPage() {
     setIsDeleteDialogOpen(true);
   };
 
-  // REFACTORED: Use mutation
   const handleConfirmDelete = () => {
     if (transactionToDeleteId) {
       deleteTransactionMutation.mutate(transactionToDeleteId);
@@ -492,6 +484,7 @@ export default function TransactionsPage() {
     ? {
         id: editingTransaction.id,
         user_id: editingTransaction.user_id,
+        // Send the absolute value to the dialog/mutation
         amount: Math.abs(editingTransaction.amount),
         description: editingTransaction.description,
         type: editingTransaction.type as "income" | "expense",
@@ -501,8 +494,6 @@ export default function TransactionsPage() {
     : null;
 
   // --- Render ---
-  // This JSX block is identical to your request,
-  // but the props being passed are now powered by the refactored logic.
   return (
     <div className="min-h-screen w-full bg-zinc-950 text-white">
       <div className="w-full space-y-4 sm:space-y-6 p-4 sm:p-6 lg:p-8">
@@ -530,7 +521,7 @@ export default function TransactionsPage() {
               />
               <Transactions
                 {...{
-                  transactions: transactionsData, // UPDATED: Use server-filtered data
+                  transactions: transactionsData,
                   getCategoryColor,
                   isLoading,
                   currentPage,
@@ -557,7 +548,7 @@ export default function TransactionsPage() {
         isOpen={isDeleteDialogOpen}
         onClose={handleCloseDeleteDialog}
         onConfirm={handleConfirmDelete}
-        isSubmitting={deleteTransactionMutation.isPending} // UPDATED: Use mutation pending state
+        isSubmitting={deleteTransactionMutation.isPending}
       />
     </div>
   );

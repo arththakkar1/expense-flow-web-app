@@ -133,6 +133,9 @@ const AddTransactionDialog = ({
       await queryClient.invalidateQueries({
         queryKey: ["analyticsTransactions"],
       });
+      await queryClient.invalidateQueries({
+        queryKey: ["transactionStats"],
+      });
 
       // Reset form
       setDescription("");

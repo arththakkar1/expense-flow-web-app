@@ -26,8 +26,6 @@ export default function SignInForm() {
     if (error) {
       setMessage(error.message);
     } else {
-      // Use router.push / router.refresh in real apps,
-      // but window.location is fine for this client component.
       window.location.href = "/dashboard";
     }
 

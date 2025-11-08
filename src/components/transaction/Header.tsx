@@ -12,10 +12,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import {
   addTransaction,
   ExportTransaction,
-  getUserAccounts,
+  // getUserAccounts, // REMOVED: Account fetching
   getUserTransactions,
   NewTransactionData,
-} from "../../lib/supabase/queries";
+} from "../../lib/supabase/queries"; // Ensure these paths are correct
 
 // --- Type Definitions ---
 type Category = {
@@ -88,28 +88,21 @@ const dialogVariants = {
 
 // --- CSV Export Function ---
 const exportToCSV = (transactions: ExportTransaction[]) => {
-  // Define CSV headers
   const headers = ["Date", "Description", "Type", "Category", "Amount"];
-
-  // Convert transactions to CSV rows
   const rows = transactions.map((transaction) => {
     const category = PREDEFINED_CATEGORIES.find(
       (cat) => cat.id === transaction.category_id
     );
-
     return [
       transaction.date,
-      `"${transaction.description.replace(/"/g, '""')}"`, // Escape quotes in description
+      `"${transaction.description.replace(/"/g, '""')}"`,
       transaction.type,
       category ? category.name : "Uncategorized",
       transaction.amount.toFixed(2),
     ].join(",");
   });
 
-  // Combine headers and rows
   const csvContent = [headers.join(","), ...rows].join("\n");
-
-  // Create blob and download
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
@@ -126,7 +119,7 @@ const exportToCSV = (transactions: ExportTransaction[]) => {
   document.body.removeChild(link);
 };
 
-// --- "Add Transaction" Dialog Component ---
+// --- "Add Transaction" Dialog Component (FIXED LOGIC) ---
 const AddTransactionDialog = ({
   isOpen,
   onClose,
@@ -140,48 +133,61 @@ const AddTransactionDialog = ({
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [type, setType] = useState<"expense" | "income">("expense");
-  const [accountId, setAccountId] = useState("");
+  // const [accountId, setAccountId] = useState(""); // REMOVED: Account state
   const [categoryId, setCategoryId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (isOpen && user) {
-      const fetchDataForForm = async () => {
-        const accountsData = await getUserAccounts(user.id);
-        if (accountsData && accountsData.length > 0) {
-          setAccountId(accountsData[0].id);
-        }
-      };
-      fetchDataForForm();
-    }
-  }, [isOpen, user]);
+  // REMOVED: useEffect for fetching and setting accountId
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !accountId || !date) return;
+
+    const numericAmount = parseFloat(amount);
+    // CRITICAL VALIDATION: Simplified to remove account check
+    if (!user || !date || numericAmount <= 0 || description.trim() === "") {
+      console.error(
+        "Form validation failed: Missing user, date, amount, or description."
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     const transactionData: NewTransactionData = {
       description,
-      amount: parseFloat(amount),
+      amount: Math.abs(numericAmount),
       date: format(date, "yyyy-MM-dd"),
       type,
       user_id: user.id,
-      account_id: accountId,
+      // REMOVED: account_id - Assuming your `NewTransactionData` type and Supabase insert
+      // now handle the account automatically (e.g., set to a default account) or you've
+      // modified your table schema to remove the NOT NULL constraint on `account_id`.
       category_id: categoryId || null,
     };
+
     try {
       await addTransaction(transactionData);
-      await queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
-      await queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      await queryClient.invalidateQueries({
-        queryKey: ["analyticsTransactions"],
-      });
-      await queryClient.invalidateQueries({ queryKey: ["budgets"] });
+
+      // Invalidate relevant queries to update all dashboards/lists
+      queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      queryClient.invalidateQueries({ queryKey: ["analyticsTransactions"] });
+      queryClient.invalidateQueries({ queryKey: ["transactionStats"] });
+
+      // Reset form on success
+      setDescription("");
+      setAmount("");
+      setDate(new Date());
+      setType("expense");
+      setCategoryId("");
 
       onClose();
     } catch (error) {
-      console.error("Failed to add transaction", error);
+      console.error("Failed to add transaction:", error);
+      alert(
+        "Failed to add transaction. Check console for details and RLS policies."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -191,6 +197,13 @@ const AddTransactionDialog = ({
     (c) => c.type === type
   );
 
+  // VALIDATION: Simplified to remove accountId check
+  const isFormValid =
+    !isSubmitting &&
+    description.trim() !== "" &&
+    parseFloat(amount) > 0 &&
+    !!date;
+
   // --- New useEffect for handling Escape key ---
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -199,14 +212,11 @@ const AddTransactionDialog = ({
       }
     };
 
-    // Add the event listener when the component mounts (or isOpen becomes true)
     document.addEventListener("keydown", handleEscape);
-
-    // Clean up the event listener when the component unmounts
     return () => {
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [onClose]); // Re-run the effect if the onClose function changes
+  }, [onClose]);
 
   return (
     <AnimatePresence>
@@ -247,6 +257,8 @@ const AddTransactionDialog = ({
                   placeholder="Amount"
                   className="w-full bg-zinc-800 border-zinc-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:ring-2 focus:ring-blue-500 focus:outline-none transition rounded-lg px-4 py-2 text-white"
                   required
+                  min="0.01"
+                  step="0.01"
                 />
               </div>
               <div>
@@ -322,7 +334,7 @@ const AddTransactionDialog = ({
               </div>
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={!isFormValid}
                 className="w-full bg-blue-600 px-6 py-3 rounded-lg font-semibold text-white disabled:opacity-50"
               >
                 {isSubmitting ? "Adding..." : "Add Transaction"}
@@ -344,7 +356,6 @@ export default function Header({ user }: { user: User | null }) {
 
     setIsExporting(true);
     try {
-      // Fetch all transactions for the user
       const transactions = await getUserTransactions(user.id);
 
       if (transactions && transactions.length > 0) {
@@ -384,7 +395,8 @@ export default function Header({ user }: { user: User | null }) {
           </button>
           <button
             onClick={() => setIsDialogOpen(true)}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-all text-sm sm:text-base"
+            disabled={!user}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-all text-sm sm:text-base disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />
             <span className="font-medium">Add Transaction</span>
