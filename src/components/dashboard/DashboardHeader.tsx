@@ -3,7 +3,9 @@
 import { Calendar as CalendarIcon, Plus, X } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import type { User } from "@supabase/supabase-js";
-import { useQueryClient } from "@tanstack/react-query";
+// --- 1. Import useQuery and createClient ---
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -14,6 +16,16 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { addTransaction, NewTransactionData } from "@/lib/supabase/queries";
+import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
+
+// --- 2. Define Profile type ---
+interface Profile {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  email: string | null;
+}
 
 type Category = {
   id: string;
@@ -23,6 +35,7 @@ type Category = {
   color: string;
 };
 
+// --- (PREDEFINED_CATEGORIES, variants, etc. are unchanged) ---
 const PREDEFINED_CATEGORIES: Category[] = [
   {
     id: "5d3b340a-16c6-4b3a-80c3-6cdd550d13ab",
@@ -85,6 +98,7 @@ const dialogVariants = {
   hidden: { scale: 0.95, opacity: 0, y: 20 },
 };
 
+// --- (AddTransactionDialog component is unchanged) ---
 const AddTransactionDialog = ({
   isOpen,
   onClose,
@@ -310,15 +324,45 @@ interface DashboardHeaderProps {
 export default function DashboardHeader({ user }: DashboardHeaderProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  const { data: profile, isLoading: isLoadingProfile } =
+    useQuery<Profile | null>({
+      queryKey: ["profile", user?.id],
+      queryFn: async () => {
+        if (!user) return null; // Don't fetch if no user
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .single();
+
+        if (error) {
+          console.error("Error fetching profile:", error);
+          return null;
+        }
+        return data;
+      },
+      enabled: !!user, // Only run query when user object exists
+    });
+
+  // Determine the name to display
+  const displayName =
+    profile?.full_name ?? user?.user_metadata?.full_name ?? "User";
+
   return (
     <>
       <div>
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
-                Welcome Back, {user?.user_metadata?.full_name ?? "User"}!
-              </h1>
+              {/* --- 4. Use Skeleton for loading state --- */}
+              {isLoadingProfile ? (
+                <Skeleton className="h-10 w-64 mb-2" />
+              ) : (
+                <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
+                  Welcome Back, {displayName}! {/* 5. Use displayName */}
+                </h1>
+              )}
               <p className="text-zinc-400 flex items-center gap-2">
                 <CalendarIcon className="w-4 h-4" />
                 {new Date().toLocaleDateString("en-US", {
