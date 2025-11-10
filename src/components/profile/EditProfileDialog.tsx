@@ -177,6 +177,7 @@ export default function EditProfileDialog({
 
     await queryClient.invalidateQueries({ queryKey: ["profile"] });
     await queryClient.invalidateQueries({ queryKey: ["user"] });
+    await queryClient.invalidateQueries({ queryKey: ["userProfile"] });
 
     setIsSubmitting(false);
     onClose();

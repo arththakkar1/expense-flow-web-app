@@ -22,13 +22,13 @@ export default function RootLayout({
 }) {
   return (
     <div className={`flex min-h-screen bg-zinc-950 ${outfit.className}`}>
-      <Sidebar />
+      <Providers>
+        <Sidebar />
 
-      <main className="min-h-screen w-full">
-        <main className="flex-1 w-full">
-          <Providers>{children}</Providers>
+        <main className="min-h-screen w-full">
+          <main className="flex-1 w-full">{children}</main>
         </main>
-      </main>
+      </Providers>
     </div>
   );
 }

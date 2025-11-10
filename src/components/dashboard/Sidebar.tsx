@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   LayoutDashboard,
   TrendingUp,
@@ -18,119 +18,81 @@ import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import Image from "next/image";
 
-// --- 1. Define your Profile type ---
-// This should match your 'profiles' table schema
+import { useQuery } from "@tanstack/react-query";
+
 interface Profile {
   id: string;
   user_id: string;
   full_name: string | null;
   avatar_url: string | null;
   email: string | null;
-  // Add any other fields you might need
 }
 
-const CACHE_KEY = "supabase_user_profile_cache"; // Renamed for clarity
-const CACHE_DURATION = 24 * 60 * 60 * 1000;
+const getUserInitials = (fullName: string | null | undefined): string => {
+  if (!fullName) return "U";
+  return fullName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase();
+};
+
+const supabase = createClient();
+
+const fetchAuthUser = async (): Promise<User | null> => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user;
+};
+
+const fetchProfile = async (userId: string): Promise<Profile | null> => {
+  const { data: profileData } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("user_id", userId)
+    .single();
+
+  return profileData as Profile | null;
+};
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+
   const [isOpen, setIsOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null); // --- 2. Add profile state ---
-  const [loading, setLoading] = useState(true);
 
-  const getUserInitials = useCallback((fullName: string | undefined) => {
-    if (!fullName) return "";
-    return fullName
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
-  }, []);
+  const { data: user, isLoading: isUserLoading } = useQuery({
+    queryKey: ["authUser"],
+    queryFn: fetchAuthUser,
+    staleTime: Infinity,
+    retry: false,
+  });
 
-  // --- 3. Updated fetch function ---
-  const fetchUserAndProfile = useCallback(async () => {
-    setLoading(true);
-    let currentUser: User | null = null;
-    let currentProfile: Profile | null = null;
+  const { data: profile, isLoading: isProfileLoading } = useQuery({
+    queryKey: ["userProfile", user?.id],
+    queryFn: async ({ queryKey }) => {
+      const [, userId] = queryKey;
 
-    try {
-      const cachedData = localStorage.getItem(CACHE_KEY);
-
-      if (cachedData) {
-        const {
-          user: cachedUser,
-          profile: cachedProfile,
-          timestamp,
-        } = JSON.parse(cachedData);
-        const isCacheValid = Date.now() - timestamp < CACHE_DURATION;
-
-        if (isCacheValid) {
-          currentUser = cachedUser;
-          currentProfile = cachedProfile;
-        } else {
-          localStorage.removeItem(CACHE_KEY); // Cache is stale
-        }
+      if (typeof userId !== "string") {
+        return null;
       }
 
-      // If no valid cache, fetch from Supabase
-      if (!currentUser) {
-        const supabase = createClient();
-        const {
-          data: { user: fetchedUser },
-        } = await supabase.auth.getUser();
-        currentUser = fetchedUser;
+      return fetchProfile(userId);
+    },
+    enabled: !!user?.id,
+    staleTime: 1000 * 60 * 5,
+  });
 
-        if (currentUser) {
-          // Now fetch the profile from 'profiles' table
-          const { data: profileData, error: profileError } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("user_id", currentUser.id)
-            .single();
-
-          if (profileError) {
-            console.error("Error fetching profile:", profileError);
-            // Still set the user, even if profile fails
-          } else {
-            currentProfile = profileData;
-          }
-
-          // Cache both user and profile
-          const cachePayload = {
-            user: currentUser,
-            profile: currentProfile,
-            timestamp: Date.now(),
-          };
-          localStorage.setItem(CACHE_KEY, JSON.stringify(cachePayload));
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching or caching user/profile:", error);
-      localStorage.removeItem(CACHE_KEY);
-    } finally {
-      setUser(currentUser);
-      setProfile(currentProfile);
-      setLoading(false);
-    }
-  }, []); // Empty dependency array, function is stable
-
-  useEffect(() => {
-    fetchUserAndProfile();
-  }, [fetchUserAndProfile]); // Dependency on fetchUserAndProfile
+  const isLoading = isUserLoading || (!!user && isProfileLoading);
 
   const handleLogout = useCallback(async () => {
-    const supabase = createClient();
     await supabase.auth.signOut();
-    localStorage.removeItem(CACHE_KEY); // Ensure cache is cleared on logout
     router.push("/login");
   }, [router]);
 
-  // Memoize menu items (no change)
   const menuItems = useMemo(
     () => [
-      // ... (your menu items)
       {
         id: "dashboard",
         label: "Dashboard",
@@ -162,11 +124,9 @@ export default function Sidebar() {
     []
   );
 
-  // --- 4. Updated SidebarContent ---
   const SidebarContent = useMemo(
     () => (
       <>
-        {/* Logo Section (no change) */}
         <div className="flex flex-col p-6 pt-2 pb-2 items-center justify-center border-b border-zinc-800">
           <Image
             src="/logo.svg"
@@ -180,9 +140,8 @@ export default function Sidebar() {
           </p>
         </div>
 
-        {/* User Profile (Updated to use 'profile' state) */}
         <div className="p-6 border-b border-zinc-800">
-          {loading ? (
+          {isLoading ? (
             <div className="flex items-center gap-3 animate-pulse">
               <div className="w-12 h-12 bg-zinc-800 rounded-full"></div>
               <div className="flex-1 space-y-2">
@@ -192,7 +151,7 @@ export default function Sidebar() {
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              {profile?.avatar_url ? ( // --- Use profile.avatar_url
+              {profile?.avatar_url ? (
                 <Image
                   src={profile.avatar_url}
                   alt="User Avatar"
@@ -200,27 +159,25 @@ export default function Sidebar() {
                   height={48}
                   width={48}
                   loading="lazy"
-                  key={profile.avatar_url} // Add key to force re-render on change
+                  key={profile.avatar_url}
                 />
               ) : (
                 <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                  {getUserInitials(profile?.full_name || "Bhupendra Jogi")}{" "}
+                  {getUserInitials(profile?.full_name ?? user?.email)}
                 </div>
               )}
-              <div className="flex-1">
+              <div className="flex-1 overflow-hidden">
                 <p className="text-sm font-semibold text-white truncate">
                   {profile?.full_name ?? "User"}
                 </p>
                 <p className="text-xs text-zinc-400 truncate">
-                  {profile?.email ?? user?.email}{" "}
-                  {/* Use profile.email or fallback */}
+                  {profile?.email ?? user?.email}
                 </p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Main Menu (no change) */}
         <nav className="flex-1 p-4 overflow-y-auto">
           <div className="space-y-1">
             {menuItems.map((item) => {
@@ -245,11 +202,9 @@ export default function Sidebar() {
           </div>
         </nav>
 
-        {/* Bottom Menu (no change) */}
         <div className="p-4 border-t border-zinc-800">
           <div className="space-y-1 mb-4">
             {bottomMenuItems.map((item) => {
-              // ... (code unchanged)
               const Icon = item.icon;
               const isActive = pathname === item.href;
               return (
@@ -271,7 +226,6 @@ export default function Sidebar() {
             })}
           </div>
 
-          {/* Logout (no change) */}
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
@@ -283,10 +237,9 @@ export default function Sidebar() {
       </>
     ),
     [
-      loading,
+      isLoading,
       user,
-      profile, // --- 5. Add 'profile' to dependency array
-      getUserInitials,
+      profile,
       pathname,
       menuItems,
       bottomMenuItems,
@@ -294,7 +247,6 @@ export default function Sidebar() {
     ]
   );
 
-  // --- Mobile Sidebar Controls (no change) ---
   return (
     <>
       <button

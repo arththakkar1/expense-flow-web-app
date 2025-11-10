@@ -360,7 +360,7 @@ export default function DashboardHeader({ user }: DashboardHeaderProps) {
                 <Skeleton className="h-10 w-64 mb-2" />
               ) : (
                 <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
-                  Welcome Back, {displayName}! {/* 5. Use displayName */}
+                  Welcome Back, {displayName}!
                 </h1>
               )}
               <p className="text-zinc-400 flex items-center gap-2">
