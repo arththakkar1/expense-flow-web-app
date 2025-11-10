@@ -10,8 +10,7 @@ import MinTransaction from "@/components/dashboard/MinTransaction";
 import { createClient } from "@/lib/supabase/client";
 import { redirect, useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
-// --- NEW: Import the Account type ---
-import type { Account } from "@/lib/supabase/queries";
+// --- REMOVED: Account type import ---
 
 // --- Type Definitions ---
 export interface Category {
@@ -188,13 +187,12 @@ export default function DashboardPage() {
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
       const [
-        accountsRes,
+        // --- REMOVED: accountsRes ---
         transactionsRes,
         monthlyTransactionsRes,
         trendDataRes,
       ] = await Promise.all([
-        // --- MODIFIED: Select all account fields ---
-        supabase.from("accounts").select("*").eq("user_id", userId),
+        // --- REMOVED: Accounts fetch ---
         supabase
           .from("transactions")
           .select(
@@ -225,14 +223,14 @@ export default function DashboardPage() {
           .gte("date", sixMonthsAgo.toISOString()),
       ]);
 
-      if (accountsRes.error) throw new Error(accountsRes.error.message);
+      // --- REMOVED: accountsRes.error check ---
       if (transactionsRes.error) throw new Error(transactionsRes.error.message);
       if (monthlyTransactionsRes.error)
         throw new Error(monthlyTransactionsRes.error.message);
       if (trendDataRes.error) throw new Error(trendDataRes.error.message);
 
       return {
-        accountsRes,
+        // --- REMOVED: accountsRes ---
         transactionsRes,
         monthlyTransactionsRes,
         trendDataRes,
@@ -249,32 +247,27 @@ export default function DashboardPage() {
     }
   }, [isUserLoading, user, router]);
 
-  // --- MODIFIED: Extract 'accounts' from useMemo ---
   const { stats, transactions, categorySpending, monthlyTrendData } =
     useMemo(() => {
       if (!data) {
         return {
-          stats: { totalBalance: 0, monthlyExpenses: 0, monthlyIncome: 0 },
+          // --- MODIFIED: Added netMonthlyBalance, removed totalBalance ---
+          stats: { netMonthlyBalance: 0, monthlyExpenses: 0, monthlyIncome: 0 },
           transactions: [],
           categorySpending: [],
           monthlyTrendData: [],
-          accounts: [], // --- NEW: Default empty array
+          // --- REMOVED: accounts: [] ---
         };
       }
 
       const {
-        accountsRes,
+        // --- REMOVED: accountsRes ---
         transactionsRes,
         monthlyTransactionsRes,
         trendDataRes,
       } = data;
 
-      const totalBalance =
-        accountsRes.data?.reduce(
-          (acc: number, account: { balance: number }) =>
-            acc + (account.balance ?? 0),
-          0
-        ) ?? 0;
+      // --- REMOVED: totalBalance calculation ---
 
       const monthlyData = (monthlyTransactionsRes.data ||
         []) as unknown as MonthlyTransaction[];
@@ -286,6 +279,9 @@ export default function DashboardPage() {
       const monthlyExpenses = monthlyData
         .filter((t) => t.type === "expense")
         .reduce((acc, t) => acc + t.amount, 0);
+
+      // --- NEW: Calculate netMonthlyBalance ---
+      const netMonthlyBalance = monthlyIncome - monthlyExpenses;
 
       const spending: { [key: string]: { amount: number; color: string } } = {};
 
@@ -345,11 +341,12 @@ export default function DashboardPage() {
       );
 
       return {
-        stats: { totalBalance, monthlyExpenses, monthlyIncome },
+        // --- MODIFIED: Added netMonthlyBalance, removed totalBalance ---
+        stats: { netMonthlyBalance, monthlyExpenses, monthlyIncome },
         transactions: (transactionsRes.data as Transaction[]) ?? [],
         categorySpending: categorySpendingData,
         monthlyTrendData: trendChartData,
-        accounts: (accountsRes.data as Account[]) ?? [], // --- NEW: Pass out the accounts
+        // --- REMOVED: accounts ---
       };
     }, [data]);
 
@@ -374,17 +371,27 @@ export default function DashboardPage() {
 
   const statsCards: StatsCard[] = useMemo(
     () => [
+      // --- MODIFIED: This card is now "Monthly Net Balance" and is dynamic ---
       {
-        gradient: "from-blue-500/20 to-blue-600/20",
-        border: "border-blue-500/30",
-        label: "Total Balance",
-        labelColor: "text-blue-400",
-        value: formatCurrency(stats.totalBalance),
+        gradient:
+          stats.netMonthlyBalance >= 0
+            ? "from-green-500/20 to-green-600/20"
+            : "from-red-500/20 to-red-600/20",
+        border:
+          stats.netMonthlyBalance >= 0
+            ? "border-green-500/30"
+            : "border-red-500/30",
+        label: "Monthly Net Balance",
+        labelColor:
+          stats.netMonthlyBalance >= 0 ? "text-green-400" : "text-red-400",
+        value: formatCurrency(stats.netMonthlyBalance),
         change: "",
-        changeType: "neutral",
+        changeType: stats.netMonthlyBalance >= 0 ? "up" : "down",
         icon: Wallet,
-        iconColor: "text-blue-400",
+        iconColor:
+          stats.netMonthlyBalance >= 0 ? "text-green-400" : "text-red-400",
       },
+      // --- End of modified card ---
       {
         gradient: "from-purple-500/20 to-purple-600/20",
         border: "border-purple-500/30",
@@ -459,7 +466,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* --- MODIFIED: Pass 'accounts' prop down --- */}
+        {/* --- REMOVED stale comment about passing accounts --- */}
         <DashboardHeader user={user || null} />
 
         {isLoading ? (
