@@ -4,7 +4,7 @@ import { Menu, X } from "lucide-react";
 // Removed import Link from "next/link";
 import React, { useState } from "react";
 // Fixed import path from "motion/react" to "framer-motion"
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
 import Image from "next/image";
 

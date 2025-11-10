@@ -258,8 +258,8 @@ function Transactions({
         ) : (
           transactions.map((transaction) => (
             <Card key={transaction.id}>
-              <CardHeader className="flex-row items-start justify-between pb-2">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
+              <CardHeader className="flex-row items-start justify-between w-full pb-2">
+                <div className="flex items-center gap-3 min-w-0">
                   <div
                     className={`p-2 rounded-lg ${
                       transaction.type === "income"
@@ -268,9 +268,9 @@ function Transactions({
                     }`}
                   >
                     {transaction.type === "income" ? (
-                      <ArrowDownLeft className="w-5 h-5 text-green-400" />
+                      <ArrowUpRight className="w-5 h-5 text-green-400" />
                     ) : (
-                      <ArrowUpRight className="w-5 h-5 text-red-400" />
+                      <ArrowDownLeft className="w-5 h-5 text-red-400" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">

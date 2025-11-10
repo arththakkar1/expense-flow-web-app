@@ -18,7 +18,7 @@ function Header({
       </div>
       <button
         onClick={() => setShowAddModal(true)}
-        className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-all hover:scale-105 active:scale-95 text-sm sm:text-base"
+        className="flex items-center cursor-pointer justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-all hover:scale-105 active:scale-95 text-sm sm:text-base"
       >
         <Plus className="w-4 h-4" />
         <span className="font-medium">Create Budget</span>

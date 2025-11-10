@@ -30,7 +30,7 @@ function Header({
               onClick={() =>
                 setTimeRange(range as "week" | "month" | "quarter" | "year")
               }
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+              className={`px-4 cursor-pointer py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                 timeRange === range
                   ? "bg-blue-600 text-white"
                   : "bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800"

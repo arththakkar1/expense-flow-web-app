@@ -18,7 +18,18 @@ import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import Image from "next/image";
 
-const CACHE_KEY = "supabase_user_cache";
+// --- 1. Define your Profile type ---
+// This should match your 'profiles' table schema
+interface Profile {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  email: string | null;
+  // Add any other fields you might need
+}
+
+const CACHE_KEY = "supabase_user_profile_cache"; // Renamed for clarity
 const CACHE_DURATION = 24 * 60 * 60 * 1000;
 
 export default function Sidebar() {
@@ -26,6 +37,7 @@ export default function Sidebar() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null); // --- 2. Add profile state ---
   const [loading, setLoading] = useState(true);
 
   const getUserInitials = useCallback((fullName: string | undefined) => {
@@ -37,24 +49,32 @@ export default function Sidebar() {
       .toUpperCase();
   }, []);
 
-  const fetchAndCacheUser = useCallback(async () => {
+  // --- 3. Updated fetch function ---
+  const fetchUserAndProfile = useCallback(async () => {
     setLoading(true);
     let currentUser: User | null = null;
+    let currentProfile: Profile | null = null;
 
     try {
       const cachedData = localStorage.getItem(CACHE_KEY);
 
       if (cachedData) {
-        const { user: cachedUser, timestamp } = JSON.parse(cachedData);
+        const {
+          user: cachedUser,
+          profile: cachedProfile,
+          timestamp,
+        } = JSON.parse(cachedData);
         const isCacheValid = Date.now() - timestamp < CACHE_DURATION;
 
         if (isCacheValid) {
           currentUser = cachedUser;
+          currentProfile = cachedProfile;
         } else {
           localStorage.removeItem(CACHE_KEY); // Cache is stale
         }
       }
 
+      // If no valid cache, fetch from Supabase
       if (!currentUser) {
         const supabase = createClient();
         const {
@@ -63,35 +83,54 @@ export default function Sidebar() {
         currentUser = fetchedUser;
 
         if (currentUser) {
-          const cachePayload = { user: currentUser, timestamp: Date.now() };
+          // Now fetch the profile from 'profiles' table
+          const { data: profileData, error: profileError } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("user_id", currentUser.id)
+            .single();
+
+          if (profileError) {
+            console.error("Error fetching profile:", profileError);
+            // Still set the user, even if profile fails
+          } else {
+            currentProfile = profileData;
+          }
+
+          // Cache both user and profile
+          const cachePayload = {
+            user: currentUser,
+            profile: currentProfile,
+            timestamp: Date.now(),
+          };
           localStorage.setItem(CACHE_KEY, JSON.stringify(cachePayload));
         }
       }
     } catch (error) {
-      console.error("Error fetching or caching user:", error);
-
+      console.error("Error fetching or caching user/profile:", error);
       localStorage.removeItem(CACHE_KEY);
     } finally {
       setUser(currentUser);
+      setProfile(currentProfile);
       setLoading(false);
     }
   }, []); // Empty dependency array, function is stable
 
   useEffect(() => {
-    fetchAndCacheUser();
-  }, [fetchAndCacheUser]); // Dependency on fetchAndCacheUser
+    fetchUserAndProfile();
+  }, [fetchUserAndProfile]); // Dependency on fetchUserAndProfile
 
-  // FIX: Wrap handleLogout in useCallback
   const handleLogout = useCallback(async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
     localStorage.removeItem(CACHE_KEY); // Ensure cache is cleared on logout
     router.push("/login");
-  }, [router]); // `router` is a dependency here
+  }, [router]);
 
-  // Memoize menu items as they are static
+  // Memoize menu items (no change)
   const menuItems = useMemo(
     () => [
+      // ... (your menu items)
       {
         id: "dashboard",
         label: "Dashboard",
@@ -114,7 +153,7 @@ export default function Sidebar() {
       { id: "profile", label: "Profile", icon: PieChart, href: "/profile" },
     ],
     []
-  ); // Empty dependency array for static data
+  );
 
   const bottomMenuItems = useMemo(
     () => [
@@ -122,10 +161,12 @@ export default function Sidebar() {
     ],
     []
   );
+
+  // --- 4. Updated SidebarContent ---
   const SidebarContent = useMemo(
     () => (
       <>
-        {/* Logo Section */}
+        {/* Logo Section (no change) */}
         <div className="flex flex-col p-6 pt-2 pb-2 items-center justify-center border-b border-zinc-800">
           <Image
             src="/logo.svg"
@@ -139,7 +180,7 @@ export default function Sidebar() {
           </p>
         </div>
 
-        {/* User Profile */}
+        {/* User Profile (Updated to use 'profile' state) */}
         <div className="p-6 border-b border-zinc-800">
           {loading ? (
             <div className="flex items-center gap-3 animate-pulse">
@@ -151,31 +192,35 @@ export default function Sidebar() {
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              {user?.user_metadata?.avatar_url ? (
+              {profile?.avatar_url ? ( // --- Use profile.avatar_url
                 <Image
-                  src={user.user_metadata.avatar_url}
+                  src={profile.avatar_url}
                   alt="User Avatar"
-                  className="w-12 h-12 rounded-full object-cover" // Added object-cover
-                  height={48} // Use actual rendered size for better performance,
-                  width={48} // assuming w-12 h-12 resolves to 48px
-                  loading="lazy" // Avatars typically aren't LCP
+                  className="w-12 h-12 rounded-full object-cover"
+                  height={48}
+                  width={48}
+                  loading="lazy"
+                  key={profile.avatar_url} // Add key to force re-render on change
                 />
               ) : (
                 <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                  {getUserInitials(user?.user_metadata?.full_name)}
+                  {getUserInitials(profile?.full_name || "Bhupendra Jogi")}{" "}
                 </div>
               )}
               <div className="flex-1">
                 <p className="text-sm font-semibold text-white truncate">
-                  {user?.user_metadata?.full_name ?? "User"}
+                  {profile?.full_name ?? "User"}
                 </p>
-                <p className="text-xs text-zinc-400 truncate">{user?.email}</p>
+                <p className="text-xs text-zinc-400 truncate">
+                  {profile?.email ?? user?.email}{" "}
+                  {/* Use profile.email or fallback */}
+                </p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Main Menu */}
+        {/* Main Menu (no change) */}
         <nav className="flex-1 p-4 overflow-y-auto">
           <div className="space-y-1">
             {menuItems.map((item) => {
@@ -200,10 +245,11 @@ export default function Sidebar() {
           </div>
         </nav>
 
-        {/* Bottom Menu */}
+        {/* Bottom Menu (no change) */}
         <div className="p-4 border-t border-zinc-800">
           <div className="space-y-1 mb-4">
             {bottomMenuItems.map((item) => {
+              // ... (code unchanged)
               const Icon = item.icon;
               const isActive = pathname === item.href;
               return (
@@ -225,7 +271,7 @@ export default function Sidebar() {
             })}
           </div>
 
-          {/* Logout */}
+          {/* Logout (no change) */}
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
@@ -239,6 +285,7 @@ export default function Sidebar() {
     [
       loading,
       user,
+      profile, // --- 5. Add 'profile' to dependency array
       getUserInitials,
       pathname,
       menuItems,
@@ -247,6 +294,7 @@ export default function Sidebar() {
     ]
   );
 
+  // --- Mobile Sidebar Controls (no change) ---
   return (
     <>
       <button

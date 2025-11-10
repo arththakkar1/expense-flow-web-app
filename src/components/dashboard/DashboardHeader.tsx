@@ -268,7 +268,7 @@ const AddTransactionDialog = ({
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
-                      className="w-full justify-start text-left font-normal bg-zinc-800 border-zinc-700 hover:bg-zinc-700 hover:text-white"
+                      className="w-full cursor-pointer justify-start text-left font-normal bg-zinc-800 border-zinc-700 hover:bg-zinc-700 hover:text-white"
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {date ? format(date, "PPP") : <span>Pick a date</span>}
@@ -291,7 +291,7 @@ const AddTransactionDialog = ({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-gradient-to-r from-sky-600 via-blue-700 to-indigo-800 px-6 py-3 rounded-lg font-semibold text-white hover:opacity-90 transition-opacity shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full cursor-pointer bg-gradient-to-r from-sky-600 via-blue-700 to-indigo-800 px-6 py-3 rounded-lg font-semibold text-white hover:opacity-90 transition-opacity shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? "Adding..." : "Add Transaction"}
               </button>
@@ -329,10 +329,10 @@ export default function DashboardHeader({ user }: DashboardHeaderProps) {
                 })}
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex  items-center gap-3">
               <button
                 onClick={() => setIsDialogOpen(true)}
-                className="bg-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30 flex items-center gap-2"
+                className="bg-blue-600 px-6 py-2 cursor-pointer rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30 flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" /> Add Transaction
               </button>

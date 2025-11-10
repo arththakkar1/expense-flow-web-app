@@ -314,7 +314,7 @@ const AddTransactionDialog = ({
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
-                      className="w-full justify-start text-left font-normal bg-zinc-800 border-zinc-700 hover:bg-zinc-700 hover:text-white"
+                      className="w-full cursor-pointer justify-start text-left font-normal bg-zinc-800 border-zinc-700 hover:bg-zinc-700 hover:text-white"
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {date ? format(date, "PPP") : <span>Pick a date</span>}
@@ -335,7 +335,7 @@ const AddTransactionDialog = ({
               <button
                 type="submit"
                 disabled={!isFormValid}
-                className="w-full bg-blue-600 px-6 py-3 rounded-lg font-semibold text-white disabled:opacity-50"
+                className="w-full cursor-pointer bg-blue-600 px-6 py-3 rounded-lg font-semibold text-white disabled:opacity-50"
               >
                 {isSubmitting ? "Adding..." : "Add Transaction"}
               </button>
@@ -386,7 +386,7 @@ export default function Header({ user }: { user: User | null }) {
           <button
             onClick={handleExport}
             disabled={isExporting || !user}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 rounded-lg transition-all text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex cursor-pointer items-center justify-center gap-2 px-4 py-2 bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 rounded-lg transition-all text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className="w-4 h-4" />
             <span className="font-medium">
@@ -396,7 +396,7 @@ export default function Header({ user }: { user: User | null }) {
           <button
             onClick={() => setIsDialogOpen(true)}
             disabled={!user}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-all text-sm sm:text-base disabled:opacity-50"
+            className="flex items-center cursor-pointer justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-all text-sm sm:text-base disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />
             <span className="font-medium">Add Transaction</span>
