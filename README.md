@@ -166,20 +166,6 @@ npm start
 
 ---
 
-## 👥 Meet the Team
-
-<div align="center">
-
-|     Developer      |                          GitHub                          |
-| :----------------: | :------------------------------------------------------: |
-|  **Thakkar Arth**  |     [@arththakkar1](https://github.com/arththakkar1)     |
-| **Vaishnav Parth** | [@ParthVaishnavDev](https://github.com/ParthVaishnavDev) |
-|  **Shah Dhruvi**   |     [@DhruviShah29](https://github.com/DhruviShah29)     |
-
-</div>
-
----
-
 ## 📸 Screenshots
 
 <div align="center">
