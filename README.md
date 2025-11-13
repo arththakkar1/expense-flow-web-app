@@ -359,14 +359,21 @@ npm start
 ### 🏠 Dashboard
 
 _Get a complete overview of your financial health_
+![Dashboard Screenshot](public/Dashboard.png)
+
+---
 
 ### 💳 Transaction Management
 
 _Effortlessly track and manage all your expenses_
+![Transaction Screenshot](public/Transactions.png)
+
+---
 
 ### 📊 Analytics
 
 _Visualize spending patterns with beautiful charts_
+![Analytics Screenshot](public/Analytics.png)
 
 ---
 
