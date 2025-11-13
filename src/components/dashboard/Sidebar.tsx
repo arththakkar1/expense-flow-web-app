@@ -43,6 +43,7 @@ const fetchAuthUser = async (): Promise<User | null> => {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  console.log(user);
   return user;
 };
 
@@ -163,7 +164,9 @@ export default function Sidebar() {
                 />
               ) : (
                 <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                  {getUserInitials(profile?.full_name ?? user?.email)}
+                  {getUserInitials(
+                    profile?.full_name ?? user?.user_metadata?.fullName
+                  )}
                 </div>
               )}
               <div className="flex-1 overflow-hidden">
