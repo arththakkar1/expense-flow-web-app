@@ -1,6 +1,7 @@
 import React from "react";
 import Image from "next/image";
 import { Pencil } from "lucide-react"; // Import Pencil icon
+import { UserType } from "@/app/(dashboard)/profile/page";
 
 // Define the shape of the profile prop
 interface Profile {
@@ -12,10 +13,15 @@ interface Profile {
 
 interface ProfileHeaderProps {
   profile: Profile;
-  onEdit: () => void; // Add onEdit prop
+  onEdit: () => void;
+  user: UserType;
 }
 
-export default function ProfileHeader({ profile, onEdit }: ProfileHeaderProps) {
+export default function ProfileHeader({
+  profile,
+  onEdit,
+  user,
+}: ProfileHeaderProps) {
   return (
     <div className="relative bg-gradient-to-br from-zinc-900 via-zinc-900 to-blue-900/20 border border-zinc-800 rounded-xl p-6 sm:p-8">
       {/* --- Edit Button --- */}
@@ -43,7 +49,7 @@ export default function ProfileHeader({ profile, onEdit }: ProfileHeaderProps) {
         </div>
         <div className="flex-1 text-center sm:text-left">
           <h2 className="text-2xl sm:text-3xl font-bold mb-2">
-            {profile?.full_name || "User"}
+            {profile?.full_name ?? user?.user_metadata?.full_name}
           </h2>
           <p className="text-zinc-400 text-sm sm:text-base">
             {profile?.email || "No email provided"}

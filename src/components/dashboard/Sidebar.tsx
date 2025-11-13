@@ -28,22 +28,13 @@ interface Profile {
   email: string | null;
 }
 
-const getUserInitials = (fullName: string | null | undefined): string => {
-  if (!fullName) return "U";
-  return fullName
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase();
-};
-
 const supabase = createClient();
 
 const fetchAuthUser = async (): Promise<User | null> => {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  console.log(user);
+
   return user;
 };
 
@@ -164,14 +155,12 @@ export default function Sidebar() {
                 />
               ) : (
                 <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                  {getUserInitials(
-                    profile?.full_name ?? user?.user_metadata?.fullName
-                  )}
+                  {profile?.full_name ?? user?.user_metadata?.full_name}
                 </div>
               )}
               <div className="flex-1 overflow-hidden">
                 <p className="text-sm font-semibold text-white truncate">
-                  {profile?.full_name ?? "User"}
+                  {profile?.full_name ?? user?.user_metadata?.full_name}
                 </p>
                 <p className="text-xs text-zinc-400 truncate">
                   {profile?.email ?? user?.email}
