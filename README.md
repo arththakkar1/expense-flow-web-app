@@ -7,7 +7,7 @@
 
 **A modern, feature-rich expense management platform that empowers individuals and small businesses to take control of their finances through intuitive design, powerful analytics, and real-time insights.**
 
-[🎯 Try Demo](https://expense-flow-web-app.vercel.app) • [📖 Documentation](#-features-that-matter) • [🐛 Report Bug](https://github.com/arththakkar1/expense-flow-web-app/issues) • [✨ Request Feature](https://github.com/arththakkar1/expense-flow-web-app/issues)
+[📖 Documentation](#-features-that-matter) • [🐛 Report Bug](https://github.com/arththakkar1/expense-flow-web-app/issues) • [✨ Request Feature](https://github.com/arththakkar1/expense-flow-web-app/issues)
 
 ---
 
